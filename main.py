@@ -14,7 +14,6 @@ count = []
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_worker(call):
-    print('here')
     global answer_exict, number_quiz, count
     if int(call.data.split(';')[1]) == number_quiz:
         correct_answer = file_info["answer"][str(number_quiz)][1]
@@ -60,20 +59,33 @@ def quiz(message):
         start_chat = False
 
 
+def generate_keyboard(*answer):
+    keyboard = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+    for item in answer:
+        button = types.KeyboardButton(item)
+        keyboard.add(button)
+    return keyboard
+
+
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     global number_quiz, count, start_chat
     if start_chat:
+        bot.send_message(message.from_user.id, "Вы не закончили прошлый квиз")
         return
-    if message.text == "/start":
-        print(message.from_user.first_name)
-        bot.send_message(message.from_user.id, "Привет! Это квиз по интересным фактам из сферы IT.")
-        bot.send_message(message.from_user.id, "Чтобы начать напиши: 'Начать'")
-    elif message.text.lower() == 'начать':
+    elif message.text == "/start":
+        bot.send_message(message.from_user.id, f"Привет, {message.from_user.first_name}! \n\n" 
+                                               f"Это квиз по интересным фактам из сферы IT 💡💡💡 \n"
+                                               f"Всё что тебе понадобится для прохождения - смартфон 📱")
+        keyboard = generate_keyboard('Да', 'Нет')
+        bot.send_message(message.from_user.id, "Готов начать?", reply_markup=keyboard)
+    elif message.text == 'Да' and not start_chat:
         start_chat = True
         quiz(message)
+    elif message.text == 'Нет':
+        bot.send_photo(message.from_user.id, open('img/sad.jpg', 'rb'))
     elif message.text == "/help":
-        bot.send_message(message.from_user.id, "Чтобы начать квиз - напиши: 'Начать'")
+        bot.send_message(message.from_user.id, "Чтобы начать - напиши: /start")
     else:
         bot.send_message(message.from_user.id, "Я тебя не понимаю. Напиши /help.")
 
