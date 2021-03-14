@@ -33,7 +33,7 @@ def callback_worker(call):
 
 def make_key(question, num):
     keyboard = types.InlineKeyboardMarkup()
-    for i in range(4):
+    for i in range(len(question)):
         key = types.InlineKeyboardButton(text=question[i], callback_data=f"{i + 1};{num}")
         keyboard.add(key)
     return keyboard
@@ -53,12 +53,12 @@ def quiz(message):
         while not answer_exict:
             continue
         answer_exict = False
-    while len(count) != 4:
+    while len(count) != len(questions):
         continue
     if len(count) == len(questions):
         bot.send_message(message.from_user.id, f"Это был последний вопрос, молодец! {emoji.emojize(':brain: ')}\n"
                                                f"Спасибо за отличную игру")
-        bot.send_message(message.from_user.id, f'Вы правильно ответили на {sum(count)}/4')
+        bot.send_message(message.from_user.id, f'Вы правильно ответили на {sum(count)}/{len(questions)}')
         number_quiz, count, start_chat = 0, [], False
 
 
