@@ -62,7 +62,7 @@ def quiz(message):
     if len(count) == len(questions):
         bot.send_message(message.from_user.id, f"Это был последний вопрос, молодец! {emoji.emojize(':brain: ')}\n"
                                                f"Спасибо за отличную игру")
-        bot.send_message(message.from_user.id, f'Ты правильно ответил на {sum(count)}/{len(questions)}')
+        bot.send_message(message.from_user.id, f'Ты правильно ответил на {sum(count)}/{len(questions)} вопросов')
         print(datetime.today().strftime('%d-%m-%Y %H:%M'))
         print(message.from_user.first_name, message.from_user.first_name)
         print(f'{sum(count)}/{len(questions)}')
