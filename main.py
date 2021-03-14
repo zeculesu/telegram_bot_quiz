@@ -6,32 +6,33 @@ import random
 from datetime import datetime
 from api_key import api_key
 
-
 bot = telebot.TeleBot(api_key)
-file_info = json.load(open('info.json', encoding='utf-8'))
-questions = file_info['questions']
-number_quiz = 0
-answer_exict, start_chat = False, False
-count = []
+file_info_questions = json.load(open('info_questions.json', encoding='utf-8'))
+file_info_user = json.load(open('info_users.json', encoding='utf-8'))
+questions = file_info_questions['questions']
 
 
-@bot.callback_query_handler(func=lambda call: True)
-def callback_worker(call):
-    global answer_exict, number_quiz, count
-    transition = ['Попробуй ещё', 'Неверно, увы', 'Не правильно', 'Подумай ещё', 'Нет, не так']
-    if int(call.data.split(';')[1]) == number_quiz:
-        correct_answer = file_info["answer"][str(number_quiz)][1]
-        if call.data.split(';')[0] in correct_answer:
-            answer_to_user = file_info["answer"][str(number_quiz)][0]
-            bot.send_message(call.message.chat.id, answer_to_user)
-            answer_exict = True
-            if len(count) != number_quiz + 1:
-                count.append(1)
-            number_quiz += 1
-        else:
-            if len(count) != number_quiz + 1:
-                count.append(0)
-            bot.send_message(call.message.chat.id, random.choice(transition))
+def update_json(id_user):
+    file_info_user["id"][id_user] = {}
+    file_info_user["id"][id_user]["number_quiz"] = 0
+    file_info_user["id"][id_user]["answer_exict"] = False
+    file_info_user["id"][id_user]["start_chat"] = False
+    file_info_user["id"][id_user]["count"] = []
+    with open('info_users.json', 'w') as file:
+        json.dump(file_info_user, file)
+
+
+def save_changes(file_info_user):
+    with open('info_users.json', 'w') as file:
+        json.dump(file_info_user, file)
+
+
+def generate_keyboard(*answer):
+    keyboard = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+    for item in answer:
+        button = types.KeyboardButton(item)
+        keyboard.add(button)
+    return keyboard
 
 
 def make_key(question, num):
@@ -43,63 +44,89 @@ def make_key(question, num):
     return keyboard
 
 
-def quiz(message):
-    global answer_exict
-    global number_quiz, count, start_chat
-    bot.send_message(message.from_user.id, "Начнём с простого")
+def quiz(message, id_user):
+    bot.send_message(id_user, "Начнём с простого")
     transition = ['Следующий вопрос:', 'Твой следующий вопрос:', 'Новый вопрос:', 'Лови следующий вопрос:']
+    count = file_info_user["id"][id_user]["count"]
     for i in range(len(questions)):
         if i != 0:
-            bot.send_message(message.from_user.id, random.choice(transition))
-        file_info["number_quiz"] = i
+            bot.send_message(id_user, random.choice(transition))
+        file_info_user["id"][id_user]["number_quiz"] = i
         keyboard = make_key(questions[list(questions.keys())[i]], i)
-        bot.send_message(message.from_user.id, list(questions.keys())[i], reply_markup=keyboard)
-        while not answer_exict:
+        bot.send_message(id_user, list(questions.keys())[i], reply_markup=keyboard)
+        while not file_info_user["id"][id_user]["answer_exict"]:
             continue
-        answer_exict = False
+        file_info_user["id"][id_user]["answer_exict"] = False
+        save_changes(file_info_user)
     while len(count) != len(questions):
         continue
     if len(count) == len(questions):
-        bot.send_message(message.from_user.id, f"Это был последний вопрос, молодец! {emoji.emojize(':brain: ')}\n"
-                                               f"Спасибо за отличную игру")
-        bot.send_message(message.from_user.id, f'Ты правильно ответил на {sum(count)}/{len(questions)} вопросов')
+        bot.send_message(id_user, f"Это был последний вопрос, молодец! {emoji.emojize(':brain: ')}\n"
+                                  f"Спасибо за отличную игру")
+        bot.send_message(id_user, f'Ты правильно ответил на {sum(count)}/{len(questions)} вопросов')
         print(datetime.today().strftime('%d-%m-%Y %H:%M'))
         print(message.from_user.first_name, message.from_user.first_name)
         print(f'{sum(count)}/{len(questions)}')
         print('---------')
-        number_quiz, count, start_chat = 0, [], False
+        update_json(id_user)
 
 
-def generate_keyboard(*answer):
-    keyboard = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-    for item in answer:
-        button = types.KeyboardButton(item)
-        keyboard.add(button)
-    return keyboard
+@bot.callback_query_handler(func=lambda call: True)
+def callback_worker(call):
+    transition = ['Попробуй ещё', 'Неверно, увы', 'Не правильно', 'Подумай ещё', 'Нет, не так']
+    id_user = call.message.chat.id
+    number_quiz = file_info_user["id"][id_user]["number_quiz"]
+    count = file_info_user["id"][id_user]["count"]
+    if int(call.data.split(';')[1]) == number_quiz:
+        correct_answer = file_info_questions["answer"][str(number_quiz)][1]
+        if call.data.split(';')[0] in correct_answer:
+            answer_to_user = file_info_questions["answer"][str(number_quiz)][0]
+            bot.send_message(call.message.chat.id, answer_to_user)
+            file_info_user["id"][id_user]["answer_exict"] = True
+            if len(count) != number_quiz + 1:
+                count.append(1)
+            number_quiz += 1
+        else:
+            if len(count) != number_quiz + 1:
+                count.append(0)
+            bot.send_message(call.message.chat.id, random.choice(transition))
+    save_changes(file_info_user)
 
 
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
-    global number_quiz, count, start_chat
-    if start_chat:
-        bot.send_message(message.from_user.id, "Вы не закончили прошлый квиз")
-        return
-    elif message.text == "/start":
-        bot.send_message(message.from_user.id, f"Привет, {message.from_user.first_name}! \n\n"
-                                               f"Это квиз по интересным фактам из сферы IT 💡💡💡 \n"
-                                               f"Всё что тебе понадобится для прохождения - смартфон 📱")
-        keyboard = generate_keyboard('Да', 'Нет')
-        bot.send_message(message.from_user.id, "Готов начать?", reply_markup=keyboard)
-    elif message.text == 'Да' and not start_chat:
-        bot.send_message(message.from_user.id, "Отлично!", reply_markup=types.ReplyKeyboardRemove())
-        start_chat = True
-        quiz(message)
-    elif message.text == 'Нет' and not start_chat:
-        bot.send_photo(message.from_user.id, open('img/sad.jpg', 'rb'))
-    elif message.text == "/help":
-        bot.send_message(message.from_user.id, "Чтобы начать - напиши: /start")
+    id_user = message.from_user.id
+    if id_user in file_info_user['id']:
+        if file_info_user["id"][id_user]["start_chat"]:
+            bot.send_message(id_user, "Вы не закончили прошлый квиз")
+            return
+        elif message.text == "/start":
+            bot.send_message(id_user, f"Привет, {message.from_user.first_name}! \n\n"
+                                      f"Это квиз по интересным фактам из сферы IT 💡💡💡 \n"
+                                      f"Всё что тебе понадобится для прохождения - смартфон 📱")
+            keyboard = generate_keyboard('Да', 'Нет')
+            bot.send_message(id_user, "Готов начать?", reply_markup=keyboard)
+            update_json(id_user)
+        elif message.text == 'Да':
+            bot.send_message(id_user, "Отлично!", reply_markup=types.ReplyKeyboardRemove())
+            file_info_user["id"][id_user]["start_chat"] = True
+            with open('info_users.json', 'w') as f:
+                json.dump(file_info_user, f)
+            quiz(message, id_user)
+        elif message.text == 'Нет':
+            bot.send_photo(id_user, open('img/sad.jpg', 'rb'))
+        elif message.text == "/help":
+            bot.send_message(id_user, "Чтобы начать - напиши: /start")
+        else:
+            bot.send_message(id_user, "Я тебя не понимаю. Напиши /help.")
     else:
-        bot.send_message(message.from_user.id, "Я тебя не понимаю. Напиши /help.")
+        if message.text == "/start":
+            bot.send_message(id_user, f"Привет, {message.from_user.first_name}! \n\n"
+                                      f"Это квиз по интересным фактам из сферы IT 💡💡💡 \n"
+                                      f"Всё что тебе понадобится для прохождения - смартфон 📱")
+            keyboard = generate_keyboard('Да', 'Нет')
+            bot.send_message(id_user, "Готов начать?", reply_markup=keyboard)
+            update_json(id_user)
 
 
 bot.polling(none_stop=True, interval=0)
