@@ -3,6 +3,7 @@ from telebot import types
 import json
 import emoji
 from random import choice
+from datetime import datetime
 
 bot = telebot.TeleBot('')
 file_info = json.load(open('info.json', encoding='utf-8'))
@@ -59,6 +60,10 @@ def quiz(message):
         bot.send_message(message.from_user.id, f"Это был последний вопрос, молодец! {emoji.emojize(':brain: ')}\n"
                                                f"Спасибо за отличную игру")
         bot.send_message(message.from_user.id, f'Вы правильно ответили на {sum(count)}/{len(questions)}')
+        print(datetime.today().strftime('%d-%m-%Y %H:%M'))
+        print(message.from_user.first_name, message.from_user.first_name)
+        print(f'{sum(count)}/{len(questions)}')
+        print('---------')
         number_quiz, count, start_chat = 0, [], False
 
 
