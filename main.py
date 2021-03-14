@@ -4,8 +4,10 @@ import json
 import emoji
 import random
 from datetime import datetime
+from api_key import api_key
 
-bot = telebot.TeleBot('')
+
+bot = telebot.TeleBot(api_key)
 file_info = json.load(open('info.json', encoding='utf-8'))
 questions = file_info['questions']
 number_quiz = 0
