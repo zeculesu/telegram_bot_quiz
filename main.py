@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 import json
 import emoji
-from random import choice
+import random
 from datetime import datetime
 
 bot = telebot.TeleBot('')
@@ -19,7 +19,7 @@ def callback_worker(call):
     transition = ['Попробуй ещё', 'Неверно, увы', 'Не правильно', 'Подумай ещё', 'Нет, не так']
     if int(call.data.split(';')[1]) == number_quiz:
         correct_answer = file_info["answer"][str(number_quiz)][1]
-        if correct_answer == int(call.data.split(';')[0]):
+        if call.data.split(';')[0] in correct_answer:
             answer_to_user = file_info["answer"][str(number_quiz)][0]
             bot.send_message(call.message.chat.id, answer_to_user)
             answer_exict = True
@@ -29,13 +29,14 @@ def callback_worker(call):
         else:
             if len(count) != number_quiz + 1:
                 count.append(0)
-            bot.send_message(call.message.chat.id, choice(transition))
+            bot.send_message(call.message.chat.id, random.choice(transition))
 
 
 def make_key(question, num):
     keyboard = types.InlineKeyboardMarkup()
+    question = random.sample(question, len(question))
     for i in range(len(question)):
-        key = types.InlineKeyboardButton(text=question[i], callback_data=f"{i + 1};{num}")
+        key = types.InlineKeyboardButton(text=question[i], callback_data=f"{question[i].split()[0]};{num}")
         keyboard.add(key)
     return keyboard
 
@@ -47,7 +48,7 @@ def quiz(message):
     transition = ['Следующий вопрос:', 'Твой следующий вопрос:', 'Новый вопрос:', 'Лови следующий вопрос:']
     for i in range(len(questions)):
         if i != 0:
-            bot.send_message(message.from_user.id, choice(transition))
+            bot.send_message(message.from_user.id, random.choice(transition))
         file_info["number_quiz"] = i
         keyboard = make_key(questions[list(questions.keys())[i]], i)
         bot.send_message(message.from_user.id, list(questions.keys())[i], reply_markup=keyboard)
@@ -59,7 +60,7 @@ def quiz(message):
     if len(count) == len(questions):
         bot.send_message(message.from_user.id, f"Это был последний вопрос, молодец! {emoji.emojize(':brain: ')}\n"
                                                f"Спасибо за отличную игру")
-        bot.send_message(message.from_user.id, f'Вы правильно ответили на {sum(count)}/{len(questions)}')
+        bot.send_message(message.from_user.id, f'Ты правильно ответил на {sum(count)}/{len(questions)}')
         print(datetime.today().strftime('%d-%m-%Y %H:%M'))
         print(message.from_user.first_name, message.from_user.first_name)
         print(f'{sum(count)}/{len(questions)}')
